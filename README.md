@@ -56,7 +56,7 @@ swift build -c release
 
 **Serdar DOĞAN**
 - Web: [serdardogan.com.tr](https://serdardogan.com.tr)
-- GitHub: [@serdardogan](https://github.com/serdardogan)
+- GitHub: [@serdardogandijital](https://github.com/serdardogandijital)
 
 ## Lisans
 
