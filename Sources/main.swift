@@ -107,7 +107,7 @@ class HotkeyManager {
 
         for i in 0..<min(count, 9) {
             var hotKeyRef: EventHotKeyRef?
-            let hotKeyID = EventHotKeyID(signature: OSType(0x59505053), id: UInt32(i + 1)) // "YPPS"
+            let hotKeyID = EventHotKeyID(signature: OSType(0x59505053), id: UInt32(i + 1))
             let status = RegisterEventHotKey(keyCodes[i], UInt32(optionKey), hotKeyID, GetApplicationEventTarget(), 0, &hotKeyRef)
             if status == noErr {
                 hotKeyRefs.append(hotKeyRef)
@@ -191,7 +191,6 @@ struct AboutView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            // Logo
             ZStack {
                 RoundedRectangle(cornerRadius: 20)
                     .fill(LinearGradient(
@@ -296,26 +295,66 @@ struct MetinRowView: View {
     }
 }
 
+// MARK: - Window Controller
+class SettingsWindowController: NSObject {
+    var window: NSWindow?
+    let manager: MetinManager
+
+    init(manager: MetinManager) {
+        self.manager = manager
+        super.init()
+    }
+
+    func showWindow() {
+        if let window = window {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let contentView = SettingsView(manager: manager)
+
+        window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 450, height: 420),
+            styleMask: [.titled, .closable, .miniaturizable],
+            backing: .buffered,
+            defer: false
+        )
+
+        window?.title = "Yapıştır+"
+        window?.contentViewController = NSHostingController(rootView: contentView)
+        window?.center()
+        window?.isReleasedWhenClosed = false
+        window?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func toggleWindow() {
+        if let window = window, window.isVisible {
+            window.orderOut(nil)
+        } else {
+            showWindow()
+        }
+    }
+}
+
 // MARK: - App Delegate
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem!
-    var popover: NSPopover!
     var manager = MetinManager()
+    var windowController: SettingsWindowController!
     private var cancellables = Set<AnyCancellable>()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        windowController = SettingsWindowController(manager: manager)
+
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
         if let button = statusItem.button {
             button.image = NSImage(systemSymbolName: "doc.on.clipboard.fill", accessibilityDescription: "Yapıştır+")
-            button.action = #selector(togglePopover)
+            button.action = #selector(statusBarButtonClicked)
             button.target = self
         }
-
-        popover = NSPopover()
-        popover.contentSize = NSSize(width: 450, height: 420)
-        popover.behavior = .transient
-        popover.contentViewController = NSHostingController(rootView: SettingsView(manager: manager))
 
         HotkeyManager.shared.onHotkey = { [weak self] num in
             self?.manager.yapistir(num)
@@ -329,15 +368,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
     }
 
-    @objc func togglePopover() {
-        if let button = statusItem.button {
-            if popover.isShown {
-                popover.performClose(nil)
-            } else {
-                popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-                popover.contentViewController?.view.window?.makeKey()
-            }
-        }
+    @objc func statusBarButtonClicked() {
+        windowController.toggleWindow()
     }
 }
 
